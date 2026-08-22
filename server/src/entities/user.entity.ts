@@ -14,16 +14,16 @@ export class User {
   @PrimaryGeneratedColumn("uuid")
   id: string;
 
-  @Column({ unique: true })
+  @Column({ type: "varchar", unique: true })
   email: string;
 
-  @Column()
+  @Column({ type: "varchar" })
   password: string;
 
-  @Column({ nullable: true })
+  @Column({ type: "varchar", nullable: true })
   name: string;
 
-  @Column({ default: false })
+  @Column({ type: "boolean", default: false })
   isEmailVerified: boolean;
 
   @Column({ nullable: true, type: "text" })
@@ -32,7 +32,7 @@ export class User {
   @Column({ nullable: true, type: "timestamp" })
   emailVerificationTokenExpires: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   lastLogin: Date;
 
   @CreateDateColumn()

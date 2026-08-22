@@ -1,5 +1,4 @@
-import dotenv from "dotenv";
-dotenv.config({ path: ".env" });
+import "./config/env.js";
 
 import express, {
   type Express,
