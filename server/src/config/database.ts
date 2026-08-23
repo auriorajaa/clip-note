@@ -1,5 +1,6 @@
 import { DataSource } from "typeorm";
 import { User } from "../entities/user.entity.js";
+import { Video } from "../entities/video.entity.js";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -11,7 +12,7 @@ export const AppDataSource = new DataSource({
   synchronize: process.env.NODE_ENV === "development",
   connectTimeoutMS: 5000,
   logging: ["query", "error"],
-  entities: [User],
+  entities: [User, Video],
   migrations: [],
   subscribers: [],
 });
