@@ -2,7 +2,7 @@ import path from "path";
 import { AppDataSource } from "../config/database.js";
 import { Video } from "../entities/video.entity.js";
 import { mkdir } from "fs/promises";
-import youtubeDlModule from "youtube-dl-exec";
+import youtubeDlModule, { youtubeDl } from "youtube-dl-exec";
 import ffmpeg from "@ffmpeg-installer/ffmpeg";
 import { AppError } from "../utils/errors.js";
 import { StatusCodes } from "http-status-codes";
@@ -82,13 +82,68 @@ export class VideoService {
 
         throw new AppError(
           StatusCodes.INTERNAL_SERVER_ERROR,
-          "Something went wrong when getting the video info. Please try again.",
+          "Failed to get video info",
         );
       }
 
       throw new AppError(
         StatusCodes.INTERNAL_SERVER_ERROR,
-        "Something went wrong when getting the video info. Please try again.",
+        "Failed to get video info",
+      );
+    }
+  }
+
+  static async downloadAudio(url: string): Promise<string> {
+    try {
+      await this.ensureDirectoryExists();
+
+      // Extract video id from given url
+      const videoId = ytdl.getVideoID(url);
+      const audioPath = path.join(this.AUDIO_DIR, `${videoId}.mp3`);
+
+      // Download audio
+      await youtubeDl(url, {
+        extractAudio: true,
+        audioFormat: "mp3",
+        audioQuality: 0, // Best quality
+        output: audioPath,
+        noWarnings: true,
+        preferFreeFormats: true,
+        ffmpegLocation: ffmpeg.path,
+      });
+
+      const fileStats = await import("fs/promises").then((fs) =>
+        fs.stat(audioPath),
+      );
+
+      if (fileStats.size === 0) {
+        throw new AppError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "Failed to download audio",
+        );
+      }
+
+      return audioPath;
+    } catch (error) {
+      logger.error("Error downloading audio", { error });
+
+      if (error instanceof Error) {
+        if (error.message.includes("ffmpeg")) {
+          throw new AppError(
+            StatusCodes.INTERNAL_SERVER_ERROR,
+            "Failed to download audio",
+          );
+        }
+
+        throw new AppError(
+          StatusCodes.INTERNAL_SERVER_ERROR,
+          "Failed to wodnload audio",
+        );
+      }
+
+      throw new AppError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Failed to wodnload audio",
       );
     }
   }

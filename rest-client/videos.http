@@ -1,9 +1,21 @@
 @baseurl = http://localhost:8080/api/v1
+@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODFmOWEwOC1mYjhlLTRhOTctOTlkOC0zMjQyNDcyNzEwYjIiLCJlbWFpbCI6InJpb3JhamFhMjAxOEBnbWFpbC5jb20iLCJpYXQiOjE3ODc1MDA5NjcsImV4cCI6MTc4NzU4NzM2N30.3ZPY_it8ojEwKjsVjFJDd1Ke2tGuYdiN8_OFjEMqnRs
 
 ### Get video info
 # @name getVideoInfo
 POST {{baseurl}}/videos/info
 Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "url": "https://www.youtube.com/watch?v=8PC5JnGHQNU"
+}
+
+### Download audio
+# @name downloadAudio
+POST {{baseurl}}/videos/audio
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
   "url": "https://www.youtube.com/watch?v=8PC5JnGHQNU"

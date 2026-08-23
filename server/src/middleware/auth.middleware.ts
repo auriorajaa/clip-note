@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
 import { AppError } from "../utils/errors.js";
 import { StatusCodes } from "http-status-codes";
+import { AuthService } from "../services/auth.service.js";
 
 declare global {
   namespace Express {
@@ -26,6 +27,18 @@ export const authenticate = async (
       throw new AppError(StatusCodes.UNAUTHORIZED, "Unauthorized");
     }
 
-    const token = authHeader.split(" ")[1];
-  } catch (error) {}
+    const parts = authHeader.split(" ");
+    const token = parts[1];
+
+    if (!token) {
+      throw new AppError(StatusCodes.UNAUTHORIZED, "Missing token");
+    }
+
+    const decoded = AuthService.verifyToken(token);
+
+    req.user = decoded;
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
