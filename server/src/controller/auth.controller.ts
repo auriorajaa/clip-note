@@ -38,4 +38,18 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async resendVerificationEmail(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.resendVerificationEmail(email);
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
 }
