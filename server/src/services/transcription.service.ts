@@ -4,7 +4,8 @@ import logger from "../utils/logger.js";
 import { AppError } from "../utils/errors.js";
 import { StatusCodes } from "http-status-codes";
 import path from "path";
-
+import ffmpeg from "fluent-ffmpeg";
+import { unlink } from "fs/promises";
 export interface TranscriptionResult {
   text: string;
   confidence: number;
@@ -65,5 +66,118 @@ export class TranscriptionService {
         "Failed to upload audio to GCS",
       );
     }
+  }
+
+  static async deleteFromGCS(gcsUrl: string): Promise<void> {
+    try {
+      const fileName = gcsUrl.split("/").pop();
+      if (!fileName) return;
+
+      const file = this.storage.bucket(this.BUCKET_NAME).file(fileName);
+      const [exists] = await file.exists();
+
+      if (exists) {
+        await file.delete();
+        logger.info(`Audio deleted from GCS: ${gcsUrl}`);
+      }
+    } catch (error) {
+      logger.error(`Error deleting audio from GCS: ${gcsUrl}`);
+    }
+  }
+
+  static async convertToWav(inputPath: string): Promise<string> {
+    const outputPath = path.join(
+      path.dirname(inputPath),
+      `${path.basename(inputPath, path.extname(inputPath))}.wav`,
+    );
+
+    return new Promise((resolve, reject) => {
+      ffmpeg(inputPath)
+        .toFormat("wav")
+        .audioFilters([
+          "aresample=resampler=soxr", // high quality resampling
+          "highpass=f=50", // remove low frequency noise
+          "lowpass=f=3000", // focus on speech frequencies
+          "afftdn=nf=-25", // reduce noise
+          "loudnorm=I=16:LRA=11:TP=-1.5", // normalize audio levels
+          "aformat=channel_layouts=mono", // ensure mono output
+        ])
+        .on("end", () => {
+          logger.info(`Audio converted to WAV: ${outputPath}`);
+          resolve(outputPath);
+        })
+        .on("error", (err) => {
+          logger.error(`Error converting audio to WAV: ${err}`);
+          reject(
+            new AppError(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              "Failed to convert audio to WAV",
+            ),
+          );
+        });
+    });
+  }
+
+  static async detectContentType(
+    audioPath: string,
+  ): Promise<"speech" | "music"> {
+    const analysisPath = path.join(
+      path.dirname(audioPath),
+      `${path.basename(audioPath, path.extname(audioPath))}_analysis.wav`,
+    );
+
+    return new Promise((resolve, reject) => {
+      let musicScore = 0;
+      let totalSamples = 0;
+
+      ffmpeg(audioPath)
+        .toFormat("wav")
+        .audioFrequency(16000) // standard audio frequency for speech
+        .audioFilter(["silencedetect=n=-50dB:d=0.5", "volumedetect"])
+        .save(analysisPath)
+        .on("stderr", (stderrLine: string) => {
+          logger.info(`FFmpeg stderr: ${stderrLine}`);
+
+          if (stderrLine.includes("silence_duration")) {
+            musicScore -= 1; // less silence, more music
+          }
+
+          if (stderrLine.includes("max_volume")) {
+            const match = stderrLine.match(/max_volume:\s*([-\d.]+)/);
+
+            if (match) {
+              const rawValue = match[1];
+              if (!rawValue) {
+                throw new AppError(
+                  StatusCodes.INTERNAL_SERVER_ERROR,
+                  "Failed to parse volume from ffmpeg output",
+                );
+              }
+              const maxVolume = parseFloat(rawValue);
+
+              if (maxVolume > -5) musicScore + 1; // high volume is at it's peak, suggest it's a music
+            }
+          }
+          totalSamples += 1;
+        })
+        .on("end", async () => {
+          await unlink(analysisPath).catch(() => {});
+          const ratio = totalSamples > 0 ? musicScore / totalSamples : 0;
+
+          logger.info(`Music detection ratio: ${ratio}`);
+          resolve(ratio > 0.5 ? "music" : "speech");
+        })
+        .on("error", async (err: Error) => {
+          logger.error(`Error detecting content type: ${err}`);
+          await unlink(analysisPath).catch(() => {});
+
+          reject(
+            new AppError(
+              StatusCodes.INTERNAL_SERVER_ERROR,
+              "Failed to detect content type",
+            ),
+          );
+        });
+    });
   }
 }
