@@ -3,10 +3,13 @@ import {
   CreateDateColumn,
   Entity,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
 import { User } from "./user.entity.js";
+import { Transcription } from "./transcription.entity.js";
+import { Analysis } from "./analysis.entity.js";
 
 @Entity()
 export class Video {
@@ -36,6 +39,12 @@ export class Video {
 
   @ManyToOne(() => User, (user) => user.videos, { nullable: false })
   user: User;
+
+  @OneToOne(() => Transcription, (transciption) => transciption.video)
+  transcription: Transcription;
+
+  @OneToOne(() => Analysis, (analysis) => analysis.video)
+  analysis: Analysis;
 
   @CreateDateColumn()
   createdAt: Date;

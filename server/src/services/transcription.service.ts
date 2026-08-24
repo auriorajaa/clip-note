@@ -1,4 +1,4 @@
-import { SpeechClient } from "@google-cloud/speech";
+import { protos, SpeechClient } from "@google-cloud/speech";
 import { Storage } from "@google-cloud/storage";
 import logger from "../utils/logger.js";
 import { AppError } from "../utils/errors.js";
@@ -179,5 +179,123 @@ export class TranscriptionService {
           );
         });
     });
+  }
+
+  static async transcribe(audioPath: string): Promise<TranscriptionResult> {
+    let wavePath: string | undefined;
+    let gcsUrl: string | undefined;
+
+    try {
+      if (!audioPath) {
+        throw new AppError(StatusCodes.BAD_REQUEST, "No audio file provided");
+      }
+
+      await this.ensureBucketExists();
+
+      // convert the filw to wav if it's not already
+      wavePath = await this.convertToWav(audioPath);
+      logger.info(`Converted audio to WAV: ${wavePath}`);
+
+      // detect if content is music or not
+      const contentType = await this.detectContentType(wavePath);
+      logger.info(`Detected content type: ${contentType}`);
+
+      if (contentType === "music") {
+        await unlink(wavePath).catch(() => {});
+
+        return {
+          text: "[MUSIC CONTENT DETECTED]",
+          confidence: 1.0,
+          isMusic: true,
+        };
+      }
+
+      // upload file to google cloud storage
+      gcsUrl = await this.uploadToGCS(wavePath);
+      logger.info(`Uploaded audio to GCS: ${gcsUrl}`);
+
+      // configure transcription request using google cloud speech
+      const request: protos.google.cloud.speech.v1.ILongRunningRecognizeRequest =
+        {
+          audio: { uri: gcsUrl },
+          config: {
+            encoding:
+              protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding
+                .LINEAR16,
+            sampleRateHertz: 16000,
+            languageCode: process.env.SPEECH_TO_TEXT_LANGUAGE || "en-US",
+            enableAutomaticPunctuation: true,
+            model: "default",
+            useEnhanced: true,
+            metadata: {
+              interactionType: "DICTATION",
+              microphoneDistance: "NEARFIELD",
+              recordingDeviceType: "SMARTPHONE",
+            },
+            enableWordTimeOffsets: true,
+            enableWordConfidence: true,
+            maxAlternatives: 1,
+            profanityFilter: true,
+            adaptation: {
+              phraseSetReferences: [],
+              customClasses: [],
+            },
+            audioChannelCount: 1,
+            enableSeparateRecognitionPerChannel: false,
+            speechContexts: [
+              {
+                phrases: ["video", "youtube", "subscribe", "like", "comment"],
+                boost: 20,
+              },
+            ],
+          },
+        };
+
+      const [operation] = await this.speechClient.longRunningRecognize(request);
+      const [response] = await operation.promise();
+      logger.info(`Transcription response: ${JSON.stringify(response)}`);
+
+      // clean up files
+      await Promise.all([
+        wavePath ? unlink(wavePath).catch(() => {}) : Promise.resolve(),
+        gcsUrl ? this.deleteFromGCS(gcsUrl) : Promise.resolve(),
+      ]);
+
+      if (!response.results || response.results.length === 0) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          "No transcription results found",
+        );
+      }
+
+      const transcription = response.results
+        .map((result) => result.alternatives?.[0]?.transcript || "")
+        .join(" ");
+
+      const confidence =
+        response.results.reduce(
+          (sum, result) => sum + (result.alternatives?.[0]?.confidence || 0),
+          0,
+        ) / response.results.length;
+
+      if (!transcription.trim()) {
+        throw new AppError(
+          StatusCodes.BAD_REQUEST,
+          "No transcription results found",
+        );
+      }
+
+      return {
+        text: transcription,
+        confidence,
+        isMusic: false,
+      };
+    } catch (error) {
+      logger.error(`Error transcribing audio: ${error}`);
+      throw new AppError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Failed to transcribe audio",
+      );
+    }
   }
 }
