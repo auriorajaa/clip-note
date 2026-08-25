@@ -17,6 +17,23 @@ services:
       retries: 5
     restart: unless-stopped
 
+  redis:
+    image: redis:8.10-alpine
+    container_name: clip-note-redis
+    ports:
+      - 6379:6379
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
 volumes:
   postgres_data:
     name: clip-note-postgres-data
+  redis_data:
+    name: clip-note-redis-data
