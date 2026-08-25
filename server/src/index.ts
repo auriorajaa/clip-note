@@ -13,16 +13,45 @@ import morgan from "morgan";
 import routes from "./routes/index.js";
 import { errorResponse } from "./utils/response.js";
 import { handleError } from "./utils/errors.js";
+import { JobsService } from "./services/jobs.service.js";
+import { createBullBoard } from "@bull-board/api";
+import { BullAdapter } from "@bull-board/api/bullAdapter";
+import { ExpressAdapter } from "@bull-board/express";
 
 // Initialize server
 const app: Express = express();
-const port = process.env.PORT || 6000;
+const port = process.env.PORT || 8080;
+const adminPort = process.env.ADMIN_PORT || 8081;
 
 const initialize = async () => {
   try {
     // Initialize database first
     await AppDataSource.initialize();
     logger.info("[SERVER]: Database connected");
+
+    // Initialize job service in background
+    await JobsService.initialize();
+    logger.info("[SERVER]: Job service initialized");
+
+    // Initialize bull board
+    const serverAdapter = new ExpressAdapter();
+    const adminApp = express();
+
+    createBullBoard({
+      queues: [new BullAdapter(JobsService.getTranscriptionQueue())],
+      serverAdapter,
+    });
+
+    adminApp.use(cors());
+    serverAdapter.setBasePath("/admin/queues");
+    adminApp.use("/admin/queues", serverAdapter.getRouter());
+
+    // start admin server
+    adminApp.listen(adminPort, () => {
+      logger.info(
+        `[SERVER]: Admin server is running at http://localhost:${adminPort}`,
+      );
+    });
 
     // Start backend server
     app.listen(port, () => {

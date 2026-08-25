@@ -137,4 +137,17 @@ export class AuthService {
       throw new AppError(StatusCodes.UNAUTHORIZED, "Invalid token");
     }
   }
+
+  static async getUserById(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: { videos: true },
+    });
+
+    if (!user) {
+      throw new AppError(StatusCodes.NOT_FOUND, "User not found");
+    }
+
+    return user;
+  }
 }

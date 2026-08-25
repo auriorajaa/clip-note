@@ -42,3 +42,9 @@ coverage/
 *.pid
 *.seed
 *.pid.lock
+
+# Credentials
+*credentials*.json
+*.pem
+*.key
+google-credentials.json
