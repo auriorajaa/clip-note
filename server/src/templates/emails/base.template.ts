@@ -1,16 +1,16 @@
 export interface EmailTemplateContent {
-  title: string;
-  body: string;
-  buttonText?: string;
-  buttonUrl?: string;
+    title: string;
+    body: string;
+    buttonText?: string;
+    buttonUrl?: string;
 }
 
 export const baseEmailTemplate = (content: EmailTemplateContent): string => {
-  const { title, body, buttonText, buttonUrl } = content;
+    const {title, body, buttonText, buttonUrl} = content;
 
-  const buttonHtml =
-    buttonText && buttonUrl
-      ? `
+    const buttonHtml =
+        buttonText && buttonUrl
+            ? `
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin: 32px auto 0;">
           <tr>
               <td align="center" style="border-radius: 6px; background-color: #0095da;">
@@ -34,9 +34,9 @@ export const baseEmailTemplate = (content: EmailTemplateContent): string => {
           </tr>
         </table>
       `
-      : "";
+            : "";
 
-  return `
+    return `
     <!DOCTYPE html>
     <html lang="en">
       <head>
