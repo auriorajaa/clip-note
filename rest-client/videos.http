@@ -1,5 +1,25 @@
 @baseurl = http://localhost:8080/api/v1
-@authToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI2ODFmOWEwOC1mYjhlLTRhOTctOTlkOC0zMjQyNDcyNzEwYjIiLCJlbWFpbCI6InJpb3JhamFhMjAxOEBnbWFpbC5jb20iLCJpYXQiOjE3ODc3MjMyNDMsImV4cCI6MTc4NzgwOTY0M30.ZcGQpEkxbr9UqzHhteZ-t5pFz9AiSkfb_KvxcUuwf24
+
+### get user videos
+# @name getUserVideos
+GET {{baseurl}}/videos/
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+> {%
+    if (response.body.data && response.body.data.length > 0) {
+        client.global.set("videoId", response.body.data[0].id);
+    } else {
+        client.log("No videos found for this user");
+    }
+%}
+
+### get video by id
+# @name getdVideoById
+GET {{baseurl}}/videos/{{videoId}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
 ### Get video info
 # @name getVideoInfo
 POST {{baseurl}}/videos/info
@@ -21,11 +41,27 @@ Authorization: Bearer {{authToken}}
 }
 
 ### transcribe video
-# @name transcribeVideo
+# @name transcribe
 POST {{baseurl}}/videos/transcribe
 Content-Type: application/json
 Authorization: Bearer {{authToken}}
 
 {
-  "url": "https://www.youtube.com/watch?v=HlCjrf7hJHk"
+  "url": "https://www.youtube.com/watch?v=_lETMYd3vvQ"
 }
+
+> {%
+    client.global.set("jobId", response.body.data.jobId);
+%}
+
+### get transcription status
+# @name getTranscriptionStatus
+GET {{baseurl}}/videos/transcribe/{{jobId}}/status
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+### get all running jobs
+# @name getAllRunningJobs
+POST {{baseurl}}/videos/jobs/running
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
