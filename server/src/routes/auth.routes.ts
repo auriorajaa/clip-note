@@ -3,9 +3,10 @@ import {AuthController} from "../controller/auth.controller.js";
 
 const router = Router();
 
+router.get("/verify-email", AuthController.verifyEmail);
+
 router.post("/register", AuthController.register);
 router.post("/login", AuthController.login);
-router.get("/verify-email", AuthController.verifyEmail);
 router.post("/resend-verification", AuthController.resendVerificationEmail);
 
 export default router;

@@ -21,6 +21,10 @@ Content-Type: application/json
   "password": "123456"
 }
 
+> {%
+    client.global.set("authToken", response.body.data.token);
+%}
+
 ### Get current user profile
 GET {{baseurl}}/auth/me
-Authorization: Bearer {{login.response.body.data.token}}
+Authorization: Bearer {{authToken}}
