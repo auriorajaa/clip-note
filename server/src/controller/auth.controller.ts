@@ -1,55 +1,55 @@
-import type { NextFunction, Request, Response } from "express";
-import { AuthService } from "../services/auth.service.js";
-import { StatusCodes } from "http-status-codes";
-import { successResponse } from "../utils/response.js";
-import { AppError } from "../utils/errors.js";
+import type {NextFunction, Request, Response} from "express";
+import {AuthService} from "../services/auth.service.js";
+import {StatusCodes} from "http-status-codes";
+import {successResponse} from "../utils/response.js";
+import {AppError} from "../utils/errors.js";
 
 export class AuthController {
-  static async register(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password, name } = req.body;
-      const result = await AuthService.register(email, password, name);
-      res.status(StatusCodes.CREATED).json(successResponse(result));
-    } catch (error) {
-      next(error);
+    static async register(req: Request, res: Response, next: NextFunction) {
+        try {
+            const {email, password, name} = req.body;
+            const result = await AuthService.register(email, password, name);
+            res.status(StatusCodes.CREATED).json(successResponse(result));
+        } catch (error) {
+            next(error);
+        }
     }
-  }
 
-  static async login(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { email, password } = req.body;
-      const result = await AuthService.login(email, password);
-      res.json(successResponse(result));
-    } catch (error) {
-      next(error);
+    static async login(req: Request, res: Response, next: NextFunction) {
+        try {
+            const {email, password} = req.body;
+            const result = await AuthService.login(email, password);
+            res.json(successResponse(result));
+        } catch (error) {
+            next(error);
+        }
     }
-  }
 
-  static async verifyEmail(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { token } = req.query;
-      if (!token || typeof token !== "string") {
-        throw new AppError(StatusCodes.BAD_REQUEST, "Invalid token");
-      }
+    static async verifyEmail(req: Request, res: Response, next: NextFunction) {
+        try {
+            const {token} = req.query;
+            if (!token || typeof token !== "string") {
+                throw new AppError(StatusCodes.BAD_REQUEST, "Invalid token");
+            }
 
-      const result = await AuthService.verifyEmail(token);
-      res.json(successResponse(result));
-    } catch (error) {
-      next(error);
+            const result = await AuthService.verifyEmail(token);
+            res.json(successResponse(result));
+        } catch (error) {
+            next(error);
+        }
     }
-  }
 
-  static async resendVerificationEmail(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ) {
-    try {
-      const { email } = req.body;
-      const result = await AuthService.resendVerificationEmail(email);
-      res.json(successResponse(result));
-    } catch (error) {
-      next(error);
+    static async resendVerificationEmail(
+        req: Request,
+        res: Response,
+        next: NextFunction,
+    ) {
+        try {
+            const {email} = req.body;
+            const result = await AuthService.resendVerificationEmail(email);
+            res.json(successResponse(result));
+        } catch (error) {
+            next(error);
+        }
     }
-  }
 }

@@ -1,8 +1,8 @@
-import { Router } from "express";
+import {Router} from "express";
 import healthRoutes from "./health.routes.js";
 import authRoutes from "./auth.routes.js";
 import videoRoutes from "./video.route.js";
-import { authenticate } from "../middleware/auth.middleware.js";
+import {authenticate} from "../middleware/auth.middleware.js";
 
 const router = Router();
 

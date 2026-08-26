@@ -1,28 +1,26 @@
-import {
-  GoogleGenerativeAI,
-  type GenerateContentRequest,
-} from "@google/generative-ai";
-import { AppError } from "../utils/errors.js";
-import { StatusCodes } from "http-status-codes";
+import {type GenerateContentRequest, GoogleGenerativeAI,} from "@google/generative-ai";
+import {AppError} from "../utils/errors.js";
+import {StatusCodes} from "http-status-codes";
+import logger from "../utils/logger.js";
 
 export interface AIAnalysis {
-  summary: string;
-  keyPoints: string[];
-  sentiment: "positive" | "negative" | "neutral";
-  topics: string[];
-  suggestedTags: string[];
+    summary: string;
+    keyPoints: string[];
+    sentiment: "positive" | "negative" | "neutral";
+    topics: string[];
+    suggestedTags: string[];
 }
 
 export class AIService {
-  private static readonly genAI = new GoogleGenerativeAI(
-    process.env.GOOGLE_API_KEY!,
-  );
-  private static readonly model = AIService.genAI.getGenerativeModel({
-    model: "gemini-3.5-flash",
-  });
+    private static readonly genAI = new GoogleGenerativeAI(
+        process.env.GOOGLE_API_KEY!,
+    );
+    private static readonly model = AIService.genAI.getGenerativeModel({
+        model: "gemini-3.5-flash",
+    });
 
-  private static generatePrompt(transcription: string, videoInfo?: any) {
-    let prompt = `You are a video content analyzer. your task is to analyze the provided video transcription and return a JSON response.
+    private static generatePrompt(transcription: string, videoInfo?: any) {
+        let prompt = `You are a video content analyzer. your task is to analyze the provided video transcription and return a JSON response.
     
     IMPORTANT: Your response must be valid JSON and match this exact structure:
     {
@@ -40,66 +38,72 @@ export class AIService {
     ${transcription}
     """`;
 
-    if (videoInfo) {
-      prompt += `\n\nAdditional video context:
+        if (videoInfo) {
+            prompt += `\n\nAdditional video context:
       Title: "${videoInfo.title}",
       Author: "${videoInfo.author}",
       Duration: ${videoInfo.duration} seconds`;
+        }
+
+        return prompt;
     }
 
-    return prompt;
-  }
+    static async analyzeTranscription(
+        transcription: string,
+        videoInfo?: any,
+    ): Promise<AIAnalysis> {
+        const prompt = AIService.generatePrompt(transcription, videoInfo);
 
-  static async analyzeTranscription(
-    transcription: string,
-    videoInfo?: any,
-  ): Promise<AIAnalysis> {
-    const prompt = AIService.generatePrompt(transcription, videoInfo);
+        const generateConfig: GenerateContentRequest = {
+            contents: [{role: "user", parts: [{text: prompt}]}],
+            generationConfig: {
+                temperature: 0.7,
+                topK: 40,
+                topP: 0.95,
+                maxOutputTokens: 2048, // increase for thinking space
+                // @ts-expect-error
+                thinkingConfig: {
+                    thinkingBudget: 0,
+                }
+            },
+        };
 
-    const generateConfig: GenerateContentRequest = {
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 1024,
-      },
-    };
+        const result = await this.model.generateContent(generateConfig);
+        const response = result.response;
+        const text = response.text();
 
-    const result = await this.model.generateContent(generateConfig);
-    const response = result.response;
-    const text = response.text();
+        logger.info(`[DEBUG] Raw AI response: ${text}`);
 
-    try {
-      // try to extract json if the response contains other text
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : text;
+        try {
+            // try to extract json if the response contains other text
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            const jsonStr = jsonMatch ? jsonMatch[0] : text;
 
-      const analysis = JSON.parse(jsonStr) as AIAnalysis;
+            const analysis = JSON.parse(jsonStr) as AIAnalysis;
 
-      // validate the required fields
-      if (
-        !analysis.summary ||
-        !Array.isArray(analysis.keyPoints) ||
-        !analysis.sentiment
-      ) {
-        throw new AppError(StatusCodes.BAD_REQUEST, "Invalid response format");
-      }
+            // validate the required fields
+            if (
+                !analysis.summary ||
+                !Array.isArray(analysis.keyPoints) ||
+                !analysis.sentiment
+            ) {
+                throw new AppError(StatusCodes.BAD_REQUEST, "Invalid response format");
+            }
 
-      // ensure sentiment is one of the allowed values
-      if (!["positive", "negative", "neutral"].includes(analysis.sentiment)) {
-        analysis.sentiment = "neutral";
-      }
+            // ensure sentiment is one of the allowed values
+            if (!["positive", "negative", "neutral"].includes(analysis.sentiment)) {
+                analysis.sentiment = "neutral";
+            }
 
-      return {
-        summary: analysis.summary,
-        keyPoints: analysis.keyPoints || [],
-        sentiment: analysis.sentiment as "positive" | "negative" | "neutral",
-        topics: analysis.topics || [],
-        suggestedTags: analysis.suggestedTags || [],
-      };
-    } catch (error) {
-      throw new AppError(StatusCodes.BAD_REQUEST, "Invalid response format");
+            return {
+                summary: analysis.summary,
+                keyPoints: analysis.keyPoints || [],
+                sentiment: analysis.sentiment as "positive" | "negative" | "neutral",
+                topics: analysis.topics || [],
+                suggestedTags: analysis.suggestedTags || [],
+            };
+        } catch (error) {
+            throw new AppError(StatusCodes.BAD_REQUEST, "Invalid response format");
+        }
     }
-  }
 }

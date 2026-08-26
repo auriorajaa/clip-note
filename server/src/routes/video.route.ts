@@ -1,6 +1,6 @@
-import { Router } from "express";
-import { VideoController } from "../controller/video.controller.js";
-import { validateYoutubeUrl } from "../middleware/validateUrl.js";
+import {Router} from "express";
+import {VideoController} from "../controller/video.controller.js";
+import {validateYoutubeUrl} from "../middleware/validateUrl.js";
 
 const router = Router();
 

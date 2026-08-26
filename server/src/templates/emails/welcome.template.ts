@@ -1,9 +1,9 @@
-import { baseEmailTemplate } from "./base.template.js";
+import {baseEmailTemplate} from "./base.template.js";
 
 export const welcomeEmailTemplate = (name: string): string => {
-  return baseEmailTemplate({
-    title: `Welcome to Clip Note, ${name}!`,
-    body: `
+    return baseEmailTemplate({
+        title: `Welcome to Clip Note, ${name}!`,
+        body: `
       We're excited to have you on board. Clip Note helps you capture, annotate, and organize video clips so nothing important slips through the cracks.
       <br /><br />
       Here's what you can do to get started:
@@ -16,7 +16,7 @@ export const welcomeEmailTemplate = (name: string): string => {
       <br />
       If you have any questions along the way, feel free to reach out — we're happy to help.
     `,
-    buttonText: "Get Started",
-    buttonUrl: process.env.FRONTEND_URL || "http://localhost:3000",
-  });
+        buttonText: "Get Started",
+        buttonUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    });
 };
