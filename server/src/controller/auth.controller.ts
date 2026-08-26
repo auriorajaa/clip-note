@@ -52,4 +52,17 @@ export class AuthController {
             next(error);
         }
     }
+
+    static async getProfile(req: Request, res: Response, next: NextFunction) {
+        try {
+            if (!req.user?.userId) {
+                throw new AppError(StatusCodes.UNAUTHORIZED, "Not authenticated");
+            }
+            const user = await AuthService.getUserById(req.user.userId);
+            
+            res.json(successResponse(user));
+        } catch (error) {
+            next(error);
+        }
+    }
 }
