@@ -9,10 +9,12 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: (data: any) => authApi.login(data),
+
         onSuccess: (data) => {
             login(data.token, data.user);
+
             router.push("/dashboard");
-        }
+        },
     });
 }
 

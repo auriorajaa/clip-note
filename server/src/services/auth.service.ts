@@ -20,7 +20,7 @@ export class AuthService {
 
         // Check if certain user already exist before
         if (existingUser) {
-            throw new AppError(StatusCodes.BAD_REQUEST, "Invalid credentials");
+            throw new AppError(StatusCodes.CONFLICT, "Email address already exists");
         }
 
         // Verification token
