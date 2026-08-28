@@ -1,8 +1,23 @@
+"use client";
+
+import {useAuth} from "@/lib/hooks/auth";
+import {useRouter} from "next/navigation";
+import {useEffect} from "react";
+
 export default function AuthLayout({
                                        children,
                                    }: {
     children: React.ReactNode;
 }) {
+    const {user} = useAuth();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (user) {
+            router.push("/dashboard");
+        }
+    }, [user, router]);
+
     return (
         <div className="grid min-h-svh lg:grid-cols-2">
             {/* Left: Logo + Auth Form */}
