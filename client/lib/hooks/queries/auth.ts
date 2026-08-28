@@ -9,10 +9,12 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: (data: any) => authApi.login(data),
+
         onSuccess: (data) => {
             login(data.token, data.user);
+
             router.push("/dashboard");
-        }
+        },
     });
 }
 
@@ -24,7 +26,7 @@ export function useRegister() {
         mutationFn: (data: any) => authApi.register(data),
         onSuccess: (data) => {
             login(data.token, data.user);
-            router.push("/dashboard");
+            router.push("/auth/login");
         }
     });
 }

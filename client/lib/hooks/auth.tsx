@@ -1,7 +1,6 @@
 import {User} from "@/lib/api/types";
 import React, {createContext, useContext, useEffect, useState} from "react";
 import {useRouter} from "next/navigation";
-import {setTokenGetter} from "@/lib/api/client";
 import {authApi} from "@/lib/api/auth";
 
 interface AuthContextType {
@@ -14,59 +13,75 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({children}: { children: React.ReactNode }) {
+export function AuthProvider({
+                                 children,
+                             }: {
+    children: React.ReactNode;
+}) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
-    // set up token getter for API client
-    useEffect(() => {
-        setTokenGetter(() => token);
-    }, [token]);
+    const router = useRouter();
 
     useEffect(() => {
         const storedToken = localStorage.getItem("token");
 
-        if (storedToken) {
-            setToken(storedToken);
-            authApi.getCurrentUser()
-                .then((response) => {
-                    setUser(response.user);
-                })
-                .catch(() => {
-                    setLoading(false);
-                })
-                .finally(() => {
-                    setLoading(false);
-                });
-        } else {
+        if (!storedToken) {
             setLoading(false);
+            return;
         }
+
+        setToken(storedToken);
+
+        authApi
+            .getCurrentUser()
+            .then((response) => {
+                setUser(response);
+            })
+            .catch(() => {
+                setToken(null);
+                setUser(null);
+            })
+            .finally(() => {
+                setLoading(false);
+            });
     }, []);
 
-    // update local storage when token changes
-    useEffect(() => {
-        if (token) {
-            localStorage.setItem("token", token);
-        } else {
-            localStorage.removeItem("token");
-        }
-    }, [token]);
+    // useEffect(() => {
+    //     if (token) {
+    //         localStorage.setItem("token", token);
+    //     } else {
+    //         localStorage.removeItem("token");
+    //     }
+    // }, [token]);
 
     const login = (newToken: string, user: User) => {
+        localStorage.setItem("token", newToken);
+
         setToken(newToken);
         setUser(user);
     };
 
     const logout = () => {
+        localStorage.removeItem("token");
+
         setToken(null);
         setUser(null);
+
         router.push("/auth/login");
     };
 
     return (
-        <AuthContext.Provider value={{user, loading, token, login, logout}}>
+        <AuthContext.Provider
+            value={{
+                user,
+                loading,
+                token,
+                login,
+                logout,
+            }}
+        >
             {children}
         </AuthContext.Provider>
     );

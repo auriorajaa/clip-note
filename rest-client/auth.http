@@ -6,7 +6,7 @@ POST {{baseurl}}/auth/register
 Content-Type: application/json
 
 {
-  "email": "aurio@mail.com",
+  "email": "justin@mail.com",
   "password": "123456",
   "name": "aurio"
 }
@@ -17,8 +17,8 @@ POST {{baseurl}}/auth/login
 Content-Type: application/json
 
 {
-  "email": "riorajaa2018@gmail.com",
-  "password": "123456"
+  "email": "justin@mail.com",
+  "password": "12345678"
 }
 
 > {%

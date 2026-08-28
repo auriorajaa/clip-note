@@ -11,7 +11,7 @@ export class EmailService {
 
     static async sendVerificationEmail(email: string, token: string) {
         try {
-            const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email?${token}`;
+            const verificationUrl = `${process.env.FRONTEND_URL}/auth/verify-email?token=${token}`;
 
             await this.resend.emails.send({
                 from: this.FROM_EMAIL,
