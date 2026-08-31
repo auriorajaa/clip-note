@@ -304,6 +304,7 @@ export class JobsService {
       failedReason,
       attempts,
       videoStatus,
+      thumbnail: result?.videoInfo?.thumbnail || null,
       final: result?.final || state === "completed" || attempts >= 3,
     };
   }

@@ -117,7 +117,7 @@ export default function SidebarNav() {
                 </SidebarGroup>
             </SidebarContent>
 
-            <SidebarFooter className="px-3 pb-4">
+            <SidebarFooter className="px-3 pb-4 bg-white">
                 <div
                     className="flex items-center justify-between group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:gap-2">
                     <p className="text-sm text-gray-500 group-data-[collapsible=icon]:hidden">

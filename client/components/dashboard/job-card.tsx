@@ -2,6 +2,7 @@ import { JobStatus } from "@/lib/api/types";
 import { Card } from "@/components/ui/card";
 import {
   AlertCircleIcon,
+  AlertTriangleIcon,
   CheckCircle2Icon,
   Clock2Icon,
   ClockIcon,
@@ -14,6 +15,8 @@ import Image from "next/image";
 import { Youtube } from "../icons/Youtube";
 import { Badge } from "../ui/badge";
 import { Progress } from "../ui/progress";
+import { Button } from "../ui/button";
+import Link from "next/link";
 
 interface JobCardProps {
   job: JobStatus & { thumbnail?: string };
@@ -101,38 +104,58 @@ export function JobCard({ job, showDetails = true }: JobCardProps) {
         "border-2",
       )}
     >
-      <div className="p-4">
-        <div className="flex items-center gap-6">
-          {/* Thumbnail */}
-          <div className="relative shrink-0">
-            <div className="h-20 w-32 rounded-lg overflow-hidden">
-              {job.thumbnail || videoInfo ? (
-                <div className="relative size-full">
-                  <Image
-                    src={job.thumbnail || "https://placehold.net/400x400.png"}
-                    alt="Video thumbnail"
-                    fill
-                    className="size-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <PlayCircleIcon className="size-8 text-primary-foreground drop-shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300" />
+      <div className="p-3 sm:p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-6">
+          {/* Thumbnail + mobile/tablet title row */}
+          <div className="flex items-center gap-4 lg:contents">
+            <div className="relative shrink-0">
+              <div className="h-16 w-24 sm:h-20 sm:w-32 rounded-lg overflow-hidden">
+                {job.thumbnail || videoInfo ? (
+                  <div className="relative size-full">
+                    <Image
+                      src={job.thumbnail || "https://placehold.net/400x400.png"}
+                      alt="Video thumbnail"
+                      fill
+                      className="size-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                      <PlayCircleIcon className="size-6 sm:size-8 text-primary-foreground drop-shadow-lg transform scale-90 group-hover:scale-100 transition-transform duration-300" />
+                    </div>
+                    <div className="absolute inset-0 opacity-60" />
                   </div>
-                  <div className="absolute inset-0 opacity-60" />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-full w-full">
-                  <Youtube className="size-8 text-muted-foreground/50" />
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center justify-center h-full w-full">
+                    <Youtube className="size-6 sm:size-8 text-muted-foreground/50" />
+                  </div>
+                )}
+              </div>
+              <div className="absolute -right-1 -bottom-1 p-1 sm:p-1.5 rounded-full shadow-sm bg-primary-foreground border-2 border-primary-foreground">
+                <StateIcons state={job.state} className="size-4 sm:size-5" />
+              </div>
             </div>
-            <div className="absolute -right-1 -bottom-1 p-1.5 rounded-full shadow-sm bg-primary-foreground border-2 border-primary-foreground">
-              <StateIcons state={job.state} className="size-5" />
+
+            {/* Title shows next to thumbnail on mobile+tablet (<lg), hidden on lg+ (rendered again below) */}
+            <div className="flex-1 min-w-0 lg:hidden">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-sm sm:text-base font-semibold leading-5 sm:leading-6 line-clamp-2 break-words">
+                  {videoInfo?.title || "Untitled Video"}
+                </h3>
+              </div>
+              <Badge
+                variant={"secondary"}
+                className={cn(
+                  "capitalize transition-colors duration-300 mt-1.5",
+                  stateBadgeStyles[job.state],
+                )}
+              >
+                {job.state}
+              </Badge>
             </div>
           </div>
 
           {/* Content section */}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="hidden lg:flex items-center gap-3 mb-2 flex-wrap">
               <h3 className="text-base font-semibold leading-6 truncate">
                 {videoInfo?.title || "Untitled Video"}
               </h3>
@@ -148,27 +171,31 @@ export function JobCard({ job, showDetails = true }: JobCardProps) {
             </div>
 
             {videoInfo?.description && (
-              <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
+              <p className="text-sm text-muted-foreground line-clamp-1 sm:line-clamp-2 lg:line-clamp-1 mb-3 mt-2 lg:mt-0">
                 {videoInfo.description}
               </p>
             )}
 
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs sm:text-sm text-muted-foreground">
               {videoInfo && (
                 <>
                   <span className="inline-flex items-center gap-1.5">
                     <Clock2Icon className="size-4" />
                     {Math.floor(videoInfo.duration / 60)} min
                   </span>
-                  <span className="text-muted-foreground/30">●</span>
+                  <span className="hidden lg:inline text-muted-foreground/30">
+                    ●
+                  </span>
                 </>
               )}
 
-              <span>{stateMessages[job.state]}</span>
+              <span className="break-words">{stateMessages[job.state]}</span>
 
               {job.attemptsMade > 0 && (
                 <>
-                  <span className="text-muted-foreground/30">●</span>
+                  <span className="hidden lg:inline text-muted-foreground/30">
+                    ●
+                  </span>
                   <span className="text-muted-foreground/90">
                     Attempts: {job.attemptsMade}/3
                   </span>
@@ -198,8 +225,83 @@ export function JobCard({ job, showDetails = true }: JobCardProps) {
                 <Progress value={job.progress} className="h-2" />
               </div>
             )}
+
+            {/* Status section */}
+            {job.state === "completed" &&
+              job.result &&
+              !showDetails &&
+              job.videoStatus && (
+                <div className="mt-4 flex flex-wrap items-center gap-3 lg:gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Badge
+                      variant={"secondary"}
+                      className={cn(
+                        "transition-colors duration-300",
+                        job.videoStatus.hasTranscription
+                          ? "bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20"
+                          : "bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20",
+                      )}
+                    >
+                      Transcription
+                    </Badge>
+                    <span>
+                      {job.videoStatus.hasTranscription
+                        ? "Transcription ready"
+                        : "No transcription"}
+                    </span>
+                  </div>
+
+                  <div>
+                    <Badge>Analysis</Badge>
+                    <span>
+                      {job.videoStatus.hasAnalysis
+                        ? "Analysis ready"
+                        : "No analysis"}
+                    </span>
+                  </div>
+                </div>
+              )}
+          </div>
+
+          {/* Action buttons */}
+          <div className="flex flex-row lg:flex-col xl:flex-row items-stretch lg:items-start gap-2 lg:gap-3 lg:ml-4 w-full lg:w-auto">
+            {videoInfo && (
+              <Button
+                className="gap-1.5 transition-all duration-300 flex-1 lg:flex-none justify-center"
+                onClick={(e) => {
+                  e.currentTarget.blur();
+                  window.open(
+                    videoInfo.videoUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
+              >
+                <Youtube className="h-4 w-4" />
+                <span className="inline">Youtube</span>
+              </Button>
+            )}
+
+            {showDetails && (
+              <Link
+                href={`/dashboard/history/${job.id}`}
+                className="flex-1 lg:flex-none"
+              >
+                <Button className="gap-1.5 transition-all duration-300 w-full justify-center">
+                  View Details
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
+
+        {/* Error message */}
+        {job.failedReason && (
+          <div className="mt-4 text-sm text-red-600 bg-red-50 border border-red-100 rounded-xl p-3 flex items-start gap-2">
+            <AlertTriangleIcon className="h-5 w-5 shrink-0 text-red-500" />
+            <p className="leading-relaxed break-words">{job.failedReason}</p>
+          </div>
+        )}
       </div>
     </Card>
   );
