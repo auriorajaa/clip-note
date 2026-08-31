@@ -47,7 +47,7 @@ Content-Type: application/json
 Authorization: Bearer {{authToken}}
 
 {
-  "url": "https://www.youtube.com/watch?v=_lETMYd3vvQ"
+  "url": "https://www.youtube.com/watch?v=Dba9Kyy73Uk"
 }
 
 > {%

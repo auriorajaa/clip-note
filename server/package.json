@@ -29,6 +29,8 @@
     "typescript": "5.8"
   },
   "dependencies": {
+    "@azure/ai-speech-transcription": "^1.0.0",
+    "@azure/core-auth": "^1.11.0",
     "@bull-board/api": "^9.4.0",
     "@bull-board/express": "^9.4.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
