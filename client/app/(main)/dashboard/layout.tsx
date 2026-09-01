@@ -37,7 +37,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <SidebarNav />
       <SidebarInset className="min-w-0">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 md:hidden">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4 sticky top-0 z-10 bg-background">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-4" />
           <span className="font-semibold">Clip Note</span>

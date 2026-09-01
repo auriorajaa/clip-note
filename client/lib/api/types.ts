@@ -114,6 +114,7 @@ export interface Video {
   url: string;
   title: string;
   description: string;
+  thumbnail: string;
   duration: number;
   author: string;
   status: string;
