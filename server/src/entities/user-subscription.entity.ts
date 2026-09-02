@@ -30,16 +30,16 @@ export class UserSubscription {
   @Column({ type: "varchar", nullable: true })
   stripeSubscriptionId: string | null;
 
-  @Column()
+  @Column({ type: "timestamp" })
   currentPeriodStart: Date | null;
 
-  @Column()
+  @Column({ type: "timestamp" })
   currentPeriodEnd: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   cancelAt: Date | null;
 
-  @Column({ nullable: true })
+  @Column({ type: "timestamp", nullable: true })
   canceledAt: Date | null;
 
   @Column({ type: "integer", default: 0 })

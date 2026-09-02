@@ -44,7 +44,7 @@ export class User {
   @OneToMany(() => UserSubscription, (subscription) => subscription.user)
   subscriptions: UserSubscription[];
 
-  @Column({ nullable: true })
+  @Column({ type: "varchar", nullable: true })
   stripeCustomerId: string | null;
 
   @CreateDateColumn()

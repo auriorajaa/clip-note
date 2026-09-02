@@ -1,13 +1,15 @@
-import {Router} from "express";
+import { Router } from "express";
 import healthRoutes from "./health.routes.js";
 import authRoutes from "./auth.routes.js";
 import videoRoutes from "./video.route.js";
-import {authenticate} from "../middleware/auth.middleware.js";
+import { authenticate } from "../middleware/auth.middleware.js";
+import subscriptionRoutes from "./subscription.routes.js";
 
 const router = Router();
 
 router.use("/health", healthRoutes);
 router.use("/auth", authRoutes);
 router.use("/videos", authenticate, videoRoutes);
+router.use("/subscriptions", subscriptionRoutes);
 
 export default router;
