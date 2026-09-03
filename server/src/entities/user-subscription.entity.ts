@@ -19,6 +19,14 @@ export class UserSubscription {
 
   @ManyToOne(() => SubscriptionPlan, (plan) => plan.subscriptions)
   plan: SubscriptionPlan;
+  @ManyToOne(() => SubscriptionPlan, { nullable: true })
+  pendingPlan: SubscriptionPlan | null;
+
+  @Column({ type: "timestamp", nullable: true })
+  pendingChangeAt: Date | null;
+
+  @Column({ type: "varchar", nullable: true })
+  stripeScheduleId: string | null;
 
   @Column({ type: "varchar" })
   status:
@@ -31,10 +39,10 @@ export class UserSubscription {
   stripeSubscriptionId: string | null;
 
   @Column({ type: "timestamp" })
-  currentPeriodStart: Date | null;
+  currentPeriodStart: Date;
 
   @Column({ type: "timestamp" })
-  currentPeriodEnd: Date | null;
+  currentPeriodEnd: Date;
 
   @Column({ type: "timestamp", nullable: true })
   cancelAt: Date | null;

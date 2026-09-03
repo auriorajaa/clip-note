@@ -3,32 +3,29 @@ import axios from "axios";
 const BASE_URL = "http://localhost:8080/api/v1";
 
 export const apiClient = axios.create({
-    baseURL: BASE_URL,
-    headers: {
-        "Content-Type": "application/json",
-    },
+  baseURL: BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
 
 apiClient.interceptors.request.use((config) => {
-    if (typeof window !== "undefined") {
-        const token = localStorage.getItem("token");
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("token");
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+  }
 
-    return config;
+  return config;
 });
 
 apiClient.interceptors.response.use(
-    (response) => response,
-    (error) => {
-        if (error.response?.status === 401) {
-            localStorage.removeItem("token");
-            window.location.href = "/auth/login";
-        }
-
-        return Promise.reject(error);
-    }
+  (response) => response,
+  (error) => {
+    // Don't automatically logout on 401 - let the auth middleware handle it
+    // The useRequireAuth hook will handle redirecting to login if needed
+    return Promise.reject(error);
+  },
 );

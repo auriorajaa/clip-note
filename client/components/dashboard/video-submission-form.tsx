@@ -54,9 +54,27 @@ export default function VideoSubmissionForm() {
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
-      toast.error("Failed to submit video", {
-        description: error?.message || "An unexpected error occurred.",
-      });
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data?.error?.message ||
+        "Failed to submit video";
+
+      // Handle 402 status (payment required)
+      // Redirect to subscriptions page if the user needs to upgrade
+      if (error.response?.status === 402) {
+        toast.error(errorMessage, {
+          description: "Click here to upgrade your plan.",
+          action: {
+            label: "Upgrade",
+            onClick: () => router.push("/subscriptions"),
+          },
+          duration: 5000,
+        });
+      } else {
+        toast.error("Failed to submit video", {
+          description: errorMessage,
+        });
+      }
     },
     onSettled: () => {
       setIsSubmitting(false);

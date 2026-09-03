@@ -8,6 +8,7 @@ export function useLogin() {
     const router = useRouter();
 
     return useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => authApi.login(data),
 
         onSuccess: (data) => {
@@ -23,6 +24,7 @@ export function useRegister() {
     const router = useRouter();
 
     return useMutation({
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         mutationFn: (data: any) => authApi.register(data),
         onSuccess: (data) => {
             login(data.token, data.user);
