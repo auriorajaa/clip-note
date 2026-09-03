@@ -63,4 +63,13 @@ export const seedSubscriptionPlans = async () => {
       isActive: true,
     },
   ];
+
+  // Seed subscription plans
+  for (const planData of plans) {
+    const plan = new SubscriptionPlan();
+    Object.assign(plan, planData);
+    await planRepository.save(plan);
+  }
+
+  logger.info("Subscription plans seeded successfully.");
 };

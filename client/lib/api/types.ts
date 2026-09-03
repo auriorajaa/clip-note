@@ -123,3 +123,64 @@ export interface Video {
   transcription: VideoTranscription | null;
   analysis: VideoAnalysis | null;
 }
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  currency: string;
+  billingInterval: "monthly" | "yearly";
+  stripePriceId: string;
+  videoLimit: number;
+  minutesLimit: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserSubscription {
+  id: string;
+  status:
+    "active" | "canceled" | "past_due" | "unpaid" | "incomplete" | "trial";
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  pendingPlan: SubscriptionPlan | null;
+  pendingChangeAt: string | null;
+  stripeScheduleId: string | null;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAt: string | null;
+  canceledAt: string | null;
+  videosUsed: number;
+  minutesUsed: number;
+  createdAt: string;
+  updatedAt: string;
+  plan: SubscriptionPlan;
+}
+
+export interface UsageSummary {
+  videosUsed: number;
+  videoLimit: number;
+  minutesUsed: number;
+  minutesLimit: number;
+  planName: string;
+}
+
+export interface CheckoutSessionRequest {
+  planId: string;
+}
+
+export interface CheckoutSessionResponse {
+  url: string;
+}
+
+export interface UserSubscriptionResponse {
+  isSubscribed: boolean;
+  subscription?: UserSubscription;
+}
+
+export interface ChangePlanResponse {
+  message: string;
+  subscription: UserSubscription;
+}

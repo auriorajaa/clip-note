@@ -25,6 +25,9 @@ router.post(
   authenticate,
   SubscriptionController.createCheckoutSession,
 );
+router.post("/change-plan", authenticate, SubscriptionController.changePlan);
 router.post("/cancel", authenticate, SubscriptionController.cancelSubscription);
+router.post("/resume", authenticate, SubscriptionController.resumeSubscription);
+router.get("/usage", authenticate, SubscriptionController.getUsageSummary);
 
 export default router;

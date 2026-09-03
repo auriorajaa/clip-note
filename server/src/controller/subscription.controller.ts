@@ -76,6 +76,27 @@ export class SubscriptionController {
     }
   }
 
+  // POST /subscriptions/change-plan
+  static async changePlan(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const userId = req.user!.userId;
+      const { planId } = req.body;
+      if (!planId) {
+        return res
+          .status(StatusCodes.BAD_REQUEST)
+          .json(errorResponse("planId is required"));
+      }
+      const result = await SubscriptionService.changePlan(userId, planId);
+      return res.status(StatusCodes.OK).json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   // POST /subscriptions/cancel
   static async cancelSubscription(
     req: Request,
@@ -85,6 +106,21 @@ export class SubscriptionController {
     try {
       const userId = req.user!.userId;
       const result = await SubscriptionService.cancelSubscription(userId);
+      return res.status(StatusCodes.OK).json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // POST /subscriptions/resume
+  static async resumeSubscription(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const userId = req.user!.userId;
+      const result = await SubscriptionService.resumeSubscription(userId);
       return res.status(StatusCodes.OK).json(successResponse(result));
     } catch (error) {
       next(error);
@@ -124,6 +160,21 @@ export class SubscriptionController {
     try {
       const result = await SubscriptionService.handleWebhook(event);
       return res.status(StatusCodes.OK).json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // GET /subscriptions/usage
+  static async getUsageSummary(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const userId = req.user!.userId;
+      const usage = await SubscriptionService.getUsageSummary(userId);
+      res.json(successResponse(usage));
     } catch (error) {
       next(error);
     }

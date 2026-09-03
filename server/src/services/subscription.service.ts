@@ -111,6 +111,101 @@ export class SubscriptionService {
     return { url: session.url };
   }
 
+  public static async changePlan(userId: string, planId: string) {
+    const subscription = await this.getUserSubscription(userId);
+    const targetPlan = await this.getPlan(planId);
+
+    if (subscription.plan.id === targetPlan.id) {
+      if (subscription.pendingPlan && subscription.stripeScheduleId) {
+        await this.stripe.subscriptionSchedules.release(subscription.stripeScheduleId);
+        subscription.pendingPlan = null;
+        subscription.pendingChangeAt = null;
+        subscription.stripeScheduleId = null;
+        await this.subscriptionRepository.save(subscription);
+        return { message: "Scheduled plan change canceled", subscription };
+      }
+      throw new AppError(StatusCodes.BAD_REQUEST, "You are already on this plan");
+    }
+    if (!subscription.stripeSubscriptionId) {
+      throw new AppError(StatusCodes.BAD_REQUEST, "Subscription is missing its Stripe ID");
+    }
+
+    const stripeSubscription = await this.stripe.subscriptions.retrieve(subscription.stripeSubscriptionId);
+    const item = stripeSubscription.items.data[0];
+    if (!item) {
+      throw new AppError(StatusCodes.INTERNAL_SERVER_ERROR, "Stripe subscription has no items");
+    }
+
+    if (Number(targetPlan.price) > Number(subscription.plan.price)) {
+      if (subscription.stripeScheduleId) {
+        await this.stripe.subscriptionSchedules.release(subscription.stripeScheduleId);
+      }
+      await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+        items: [{ id: item.id, price: targetPlan.stripePriceId }],
+        proration_behavior: "always_invoice",
+        cancel_at_period_end: false,
+      });
+      subscription.plan = targetPlan;
+      subscription.pendingPlan = null;
+      subscription.pendingChangeAt = null;
+      subscription.stripeScheduleId = null;
+      subscription.cancelAt = null;
+      subscription.canceledAt = null;
+      await this.subscriptionRepository.save(subscription);
+      return { message: "Subscription upgraded successfully", subscription };
+    }
+
+    if (subscription.cancelAt) {
+      await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+        cancel_at_period_end: false,
+      });
+      subscription.cancelAt = null;
+      subscription.canceledAt = null;
+    }
+    if (subscription.stripeScheduleId) {
+      await this.stripe.subscriptionSchedules.release(subscription.stripeScheduleId);
+    }
+
+    const schedule = await this.stripe.subscriptionSchedules.create({
+      from_subscription: subscription.stripeSubscriptionId,
+    });
+    const periodStart = item.current_period_start;
+    const periodEnd = item.current_period_end;
+    await this.stripe.subscriptionSchedules.update(schedule.id, {
+      end_behavior: "release",
+      phases: [
+        {
+          items: [{ price: subscription.plan.stripePriceId, quantity: 1 }],
+          start_date: periodStart,
+          end_date: periodEnd,
+        },
+        {
+          items: [{ price: targetPlan.stripePriceId, quantity: 1 }],
+          start_date: periodEnd,
+        },
+      ],
+    });
+
+    subscription.pendingPlan = targetPlan;
+    subscription.pendingChangeAt = new Date(periodEnd * 1000);
+    subscription.stripeScheduleId = schedule.id;
+    await this.subscriptionRepository.save(subscription);
+    return { message: "Downgrade scheduled for the end of the current period", subscription };
+  }
+
+  public static async resumeSubscription(userId: string) {
+    const subscription = await this.getUserSubscription(userId);
+    if (!subscription.stripeSubscriptionId) {
+      throw new AppError(StatusCodes.BAD_REQUEST, "Subscription is missing its Stripe ID");
+    }
+    await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
+      cancel_at_period_end: false,
+    });
+    subscription.cancelAt = null;
+    subscription.canceledAt = null;
+    await this.subscriptionRepository.save(subscription);
+    return { message: "Subscription cancellation has been resumed" };
+  }
   // Handle the webhook event
   public static async handleWebhook(event: Stripe.Event) {
     switch (event.type) {
@@ -153,6 +248,9 @@ export class SubscriptionService {
     session: Stripe.Checkout.Session,
   ) {
     const { userId, planId } = session.metadata || {};
+    if (!session.subscription || !userId || !planId) {
+      return;
+    }
     // Retrieve the subscription from Stripe
     const subscription = await this.stripe.subscriptions.retrieve(
       session.subscription as string,
@@ -292,17 +390,24 @@ export class SubscriptionService {
           subscriptionItem.current_period_end * 1000,
         );
 
-        // Cancel at is set to null if the subscription is not cancelled
-        if (subscription.cancel_at) {
-          userSubscription.cancelAt = new Date(subscription.cancel_at * 1000);
+        const updatedPlan = await this.planRepository.findOneBy({
+          stripePriceId: subscriptionItem.price.id,
+        });
+        if (updatedPlan) {
+          userSubscription.plan = updatedPlan;
+          if (userSubscription.pendingPlan?.id === updatedPlan.id) {
+            userSubscription.pendingPlan = null;
+            userSubscription.pendingChangeAt = null;
+            userSubscription.stripeScheduleId = null;
+          }
         }
 
-        // Canceled at is set to null if the subscription is not canceled
-        if (subscription.canceled_at) {
-          userSubscription.canceledAt = new Date(
-            subscription.canceled_at * 1000,
-          );
-        }
+        userSubscription.cancelAt = subscription.cancel_at
+          ? new Date(subscription.cancel_at * 1000)
+          : null;
+        userSubscription.canceledAt = subscription.canceled_at
+          ? new Date(subscription.canceled_at * 1000)
+          : null;
 
         await this.subscriptionRepository.save(userSubscription);
       }
@@ -352,9 +457,14 @@ export class SubscriptionService {
       );
     }
 
-    const subscription = new UserSubscription();
+    const existingSubscription = await this.subscriptionRepository.findOne({
+      where: { stripeSubscriptionId: stripeSubscription.id },
+      relations: { plan: true, pendingPlan: true },
+    });
+    const subscription = existingSubscription ?? new UserSubscription();
     subscription.user = user;
     subscription.plan = plan;
+    subscription.stripeCustomerId = user.stripeCustomerId;
     subscription.status = stripeSubscription.status as any;
     subscription.stripeSubscriptionId = stripeSubscription.id;
     subscription.currentPeriodStart = new Date(
@@ -439,7 +549,7 @@ export class SubscriptionService {
   private static async findActiveUserSubscription(userId: string) {
     return this.subscriptionRepository.findOne({
       where: { user: { id: userId }, status: "active" },
-      relations: { plan: true },
+      relations: { plan: true, pendingPlan: true },
       order: { createdAt: "DESC" },
     });
   }
@@ -457,6 +567,9 @@ export class SubscriptionService {
     await this.stripe.subscriptions.update(subscription.stripeSubscriptionId!, {
       cancel_at_period_end: true,
     });
+    subscription.cancelAt = subscription.currentPeriodEnd;
+    subscription.canceledAt = null;
+    await this.subscriptionRepository.save(subscription);
 
     return {
       message:
@@ -481,6 +594,42 @@ export class SubscriptionService {
       userSubscription.minutesUsed += minutesUsed;
       await this.subscriptionRepository.save(userSubscription);
     }
+  }
+
+  // Get the user's usage summary, including videos and minutes used
+  public static async getUsageSummary(userId: string) {
+    const userSubscription = await this.findActiveUserSubscription(userId);
+    // If the user has a subscription, return their usage summary
+    if (userSubscription) {
+      return {
+        videosUsed: userSubscription.videosUsed,
+        videoLimit: userSubscription.plan.videoLimit,
+        minutesUsed: userSubscription.minutesUsed,
+        minutesLimit: userSubscription.plan.minutesLimit,
+        planName: userSubscription.plan.name,
+      };
+    }
+    // If the user does not have a subscription, return the free plan usage summary
+    const freePlan = await this.planRepository.findOne({
+      where: { name: "Free" },
+    });
+    // If the free plan is not found, throw an error
+    if (!freePlan) {
+      throw new AppError(
+        StatusCodes.INTERNAL_SERVER_ERROR,
+        "Free plan configuration not found",
+      );
+    }
+    const videosUsed = await this.countUserVideos(userId);
+    const minutesUsed = await this.countUserMinutes(userId);
+    // Return the free plan usage summary
+    return {
+      videosUsed,
+      videoLimit: freePlan.videoLimit,
+      minutesUsed,
+      minutesLimit: freePlan.minutesLimit,
+      planName: freePlan.name,
+    };
   }
 
   // Count the number of videos the user has uploaded
