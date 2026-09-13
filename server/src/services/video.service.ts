@@ -60,11 +60,14 @@ export class VideoService {
         try {
             // Get video from youtube using youtube-dl (from: youtube-dl-exec package)
             const youtubeDl = (youtubeDlModule as any).default ?? youtubeDlModule;
+            const proxyUrl = process.env.YT_PROXY_URL;
+
             const rawInfo = await youtubeDl(url, {
-                dumpSingleJson: true,
-                noWarnings: true,
-                preferFreeFormats: true,
-                ffmpegLocation: ffmpeg.path,
+              dumpSingleJson: true,
+              noWarnings: true,
+              preferFreeFormats: true,
+              ffmpegLocation: ffmpeg.path,
+              ...(proxyUrl ? { proxy: proxyUrl } : {}),
             });
 
             const info = rawInfo as YoutubeDLOutput;
@@ -122,15 +125,18 @@ export class VideoService {
             const videoId = ytdl.getVideoID(url);
             const audioPath = path.join(this.AUDIO_DIR, `${videoId}.mp3`);
 
+            const proxyUrl = process.env.YT_PROXY_URL;
+
             // Download audio
             await youtubeDl(url, {
-                extractAudio: true,
-                audioFormat: "mp3",
-                audioQuality: 0, // Best quality
-                output: audioPath,
-                noWarnings: true,
-                preferFreeFormats: true,
-                ffmpegLocation: ffmpeg.path,
+              extractAudio: true,
+              audioFormat: "mp3",
+              audioQuality: 0, // Best quality
+              output: audioPath,
+              noWarnings: true,
+              preferFreeFormats: true,
+              ffmpegLocation: ffmpeg.path,
+              ...(proxyUrl ? { proxy: proxyUrl } : {}),
             });
 
             const fileStats = await import("fs/promises").then((fs) =>
