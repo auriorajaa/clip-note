@@ -19,6 +19,21 @@ export class VideoController {
     }
   }
 
+  static async diagnoseVideo(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const { url } = req.body;
+      const result = await VideoService.diagnoseUrl(url);
+
+      res.json(successResponse(result));
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async downloadAudio(req: Request, res: Response, next: NextFunction) {
     try {
       const { url } = req.body;

@@ -48,3 +48,6 @@ coverage/
 *.pem
 *.key
 google-credentials.json
+# YouTube cookies (contains account session tokens)
+cookies.txt
+**/cookies.txt

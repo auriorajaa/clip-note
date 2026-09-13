@@ -100,7 +100,9 @@ export class VideoService {
         // the direct attempt fails. Set YT_PROXY_FIRST=true to invert the order.
         const attempts: (string | undefined)[] = proxyFirst && proxyUrl
             ? [proxyUrl, undefined]
-            : [undefined, proxyUrl];
+            : proxyUrl
+              ? [undefined, proxyUrl]
+              : [undefined];
 
         let lastError: unknown;
 
@@ -138,52 +140,75 @@ export class VideoService {
         throw lastError;
     }
 
+    private static async fetchVideoInfo(url: string): Promise<VideoInfo> {
+        const rawInfo = await this.runYoutubeDl<YoutubeDLOutput>(
+            url,
+            (proxy) => ({
+                dumpSingleJson: true,
+                noWarnings: true,
+                preferFreeFormats: true,
+                ffmpegLocation: ffmpeg.path,
+                ...(proxy ? {proxy} : {}),
+                ...this.getCookiesOptions(),
+                ...this.getExtraArgs(),
+            }),
+        );
+
+        const info = rawInfo as YoutubeDLOutput;
+
+        if (
+            !info.title ||
+            !info.uploader ||
+            typeof info.duration !== "number"
+        ) {
+            throw new AppError(StatusCodes.BAD_REQUEST, "Invalid video info");
+        }
+
+        // Getting a thumbnail with ytdl-core
+        const thumbnail =
+            info.thumbnail ||
+            (info as any).thumbnails?.[0]?.url ||
+            `https://i.ytimg.com/vi/${ytdl.getVideoID(url)}/maxresdefault.jpg`;
+
+        return {
+            title: info.title,
+            description: info.description || "",
+            duration: info.duration,
+            author: info.uploader,
+            videoUrl: url,
+            thumbnail: thumbnail,
+        };
+    }
+
     static async getVideoInfo(url: string): Promise<VideoInfo> {
         try {
-            const rawInfo = await this.runYoutubeDl<YoutubeDLOutput>(
-                url,
-                (proxy) => ({
-                    dumpSingleJson: true,
-                    noWarnings: true,
-                    preferFreeFormats: true,
-                    ffmpegLocation: ffmpeg.path,
-                    ...(proxy ? {proxy} : {}),
-                    ...this.getCookiesOptions(),
-                    ...this.getExtraArgs(),
-                }),
-            );
-
-            const info = rawInfo as YoutubeDLOutput;
-
-            if (
-                !info.title ||
-                !info.uploader ||
-                typeof info.duration !== "number"
-            ) {
-                throw new AppError(StatusCodes.BAD_REQUEST, "Invalid video info");
-            }
-
-            // Getting a thumbnail with ytdl-core
-            const thumbnail =
-                info.thumbnail ||
-                (info as any).thumbnails?.[0]?.url ||
-                `https://i.ytimg.com/vi/${ytdl.getVideoID(url)}/maxresdefault.jpg`;
-
-            return {
-                title: info.title,
-                description: info.description || "",
-                duration: info.duration,
-                author: info.uploader,
-                videoUrl: url,
-                thumbnail: thumbnail,
-            };
+            return await this.fetchVideoInfo(url);
         } catch (error) {
             logger.error("Error getting video info", {
                 message: error instanceof Error ? error.message : String(error),
+                stderr: (error as any)?.stderr
+                    ? String((error as any).stderr)
+                    : undefined,
+                stdout: (error as any)?.stdout
+                    ? String((error as any).stdout)
+                    : undefined,
                 stack: error instanceof Error ? error.stack : undefined,
             });
 
             if (error instanceof Error) {
+                // Invalid or unreadable cookies file.
+                if (
+                    /cookies?/i.test(error.message) &&
+                    /(unable to read|could not load|does not look like|netscape)/i.test(
+                        error.message,
+                    )
+                ) {
+                    throw new AppError(
+                        StatusCodes.INTERNAL_SERVER_ERROR,
+                        "Invalid YouTube cookies file configured on the server (YT_COOKIES_FILE).",
+                    );
+                }
+
                 // YouTube bot detection (e.g. default return "Sign in to confirm you're not a bot")
                 if (
                     error.message.includes("Sign in to confirm") ||
@@ -210,6 +235,17 @@ export class VideoService {
                         "This video is private",
                     );
                 }
+                // Region-locked content.
+                if (
+                    error.message.includes("not available in your country") ||
+                    error.message.includes("not available in this country") ||
+                    /country|geoblock|geo.?block/i.test(error.message)
+                ) {
+                    throw new AppError(
+                        StatusCodes.FORBIDDEN,
+                        "Video is not available in your region/country.",
+                    );
+                }
                 if (error.message.includes("not available")) {
                     throw new AppError(StatusCodes.NOT_FOUND, "Video not found");
                 }
@@ -223,6 +259,37 @@ export class VideoService {
                 StatusCodes.INTERNAL_SERVER_ERROR,
                 "Failed to get video info",
             );
+        }
+    }
+
+    static async diagnoseUrl(url: string): Promise<{
+        ok: boolean;
+        data?: VideoInfo;
+        message?: string;
+        rawMessage?: string;
+    }> {
+        try {
+            const data = await this.fetchVideoInfo(url);
+            return {ok: true, data};
+        } catch (error) {
+            const stderr = (error as any)?.stderr
+                ? String((error as any).stderr)
+                : "";
+            const rawMessage =
+                stderr ||
+                (error instanceof Error ? error.message : String(error));
+
+            logger.error("YouTube diagnostics check failed", {
+                url,
+                rawMessage,
+                stack: error instanceof Error ? error.stack : undefined,
+            });
+
+            return {
+                ok: false,
+                message: rawMessage.split("\n").shift()?.trim() || rawMessage,
+                rawMessage,
+            };
         }
     }
 
@@ -261,7 +328,15 @@ export class VideoService {
 
             return audioPath;
         } catch (error) {
-            logger.error("Error downloading audio", {error});
+            logger.error("Error downloading audio", {
+                message: error instanceof Error ? error.message : String(error),
+                stderr: (error as any)?.stderr
+                    ? String((error as any).stderr)
+                    : undefined,
+                stdout: (error as any)?.stdout
+                    ? String((error as any).stdout)
+                    : undefined,
+            });
 
             if (error instanceof Error) {
                 if (error.message.includes("ffmpeg")) {

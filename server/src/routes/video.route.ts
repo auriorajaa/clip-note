@@ -9,6 +9,7 @@ router.get("/:id", VideoController.getVideoById);
 router.get("/transcribe/:jobId/status", VideoController.getTranscriptionStatus);
 
 router.post("/info", validateYoutubeUrl, VideoController.getVideoInfo);
+router.post("/diagnose", validateYoutubeUrl, VideoController.diagnoseVideo);
 router.post("/audio", validateYoutubeUrl, VideoController.downloadAudio);
 router.post("/transcribe", VideoController.transcribeVideo);
 router.post("/jobs/running", VideoController.getAllJobs);
