@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import type { Relation } from "typeorm";
 import { User } from "./user.entity.js";
 import { SubscriptionPlan } from "./subscription-plan.entity.js";
 
@@ -15,12 +16,13 @@ export class UserSubscription {
   id: string;
 
   @ManyToOne(() => User, (user) => user.subscriptions)
-  user: User;
+  user: Relation<User>;
 
   @ManyToOne(() => SubscriptionPlan, (plan) => plan.subscriptions)
-  plan: SubscriptionPlan;
+  plan: Relation<SubscriptionPlan>;
+
   @ManyToOne(() => SubscriptionPlan, { nullable: true })
-  pendingPlan: SubscriptionPlan | null;
+  pendingPlan: Relation<SubscriptionPlan> | null;
 
   @Column({ type: "timestamp", nullable: true })
   pendingChangeAt: Date | null;

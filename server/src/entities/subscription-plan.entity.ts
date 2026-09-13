@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from "typeorm";
+import type { Relation } from "typeorm";
 import { UserSubscription } from "./user-subscription.entity.js";
 
 @Entity()
@@ -41,7 +42,7 @@ export class SubscriptionPlan {
   isActive: boolean;
 
   @OneToMany(() => UserSubscription, (subscription) => subscription.plan)
-  subscriptions: UserSubscription[];
+  subscriptions: Relation<UserSubscription>[];
 
   @CreateDateColumn()
   createdAt: Date;

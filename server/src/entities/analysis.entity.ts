@@ -7,6 +7,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import type { Relation } from "typeorm";
 import {Video} from "./video.entity.js";
 
 @Entity()
@@ -35,7 +36,7 @@ export class Analysis {
 
     @OneToOne(() => Video, (video) => video.analysis)
     @JoinColumn()
-    video: Video;
+    video: Relation<Video>;
 
     @CreateDateColumn()
     createdAt: Date;

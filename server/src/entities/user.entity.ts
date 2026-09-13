@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from "typeorm";
+import type { Relation } from "typeorm";
 import * as bcrypt from "bcrypt";
 import { Video } from "./video.entity.js";
 import { UserSubscription } from "./user-subscription.entity.js";
@@ -39,10 +40,10 @@ export class User {
   lastLogin: Date;
 
   @OneToMany(() => Video, (video) => video.user)
-  videos: Video[];
+  videos: Relation<Video>[];
 
   @OneToMany(() => UserSubscription, (subscription) => subscription.user)
-  subscriptions: UserSubscription[];
+  subscriptions: Relation<UserSubscription>[];
 
   @Column({ type: "varchar", nullable: true })
   stripeCustomerId: string | null;

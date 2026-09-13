@@ -7,6 +7,7 @@ import {
     PrimaryGeneratedColumn,
     UpdateDateColumn,
 } from "typeorm";
+import type { Relation } from "typeorm";
 import {User} from "./user.entity.js";
 import {Transcription} from "./transcription.entity.js";
 import {Analysis} from "./analysis.entity.js";
@@ -38,13 +39,13 @@ export class Video {
     status: "pending" | "processing" | "completed" | "failed";
 
     @ManyToOne(() => User, (user) => user.videos, {nullable: false})
-    user: User;
+    user: Relation<User>;
 
     @OneToOne(() => Transcription, (transciption) => transciption.video)
-    transcription: Transcription;
+    transcription: Relation<Transcription>;
 
     @OneToOne(() => Analysis, (analysis) => analysis.video)
-    analysis: Analysis;
+    analysis: Relation<Analysis>;
 
     @CreateDateColumn()
     createdAt: Date;
