@@ -36,7 +36,12 @@ export class JobsService {
       redis: {
         host: process.env.REDIS_HOST || "localhost",
         port: parseInt(process.env.REDIS_PORT || "6379"),
+        username: process.env.REDIS_USERNAME || "default",
+        password: process.env.REDIS_PASSWORD,
+
+        tls: process.env.REDIS_TLS === "true" ? {} : undefined,
       },
+
       defaultJobOptions: {
         attempts: 3,
         backoff: {
@@ -44,11 +49,11 @@ export class JobsService {
           delay: 2000,
         },
         removeOnComplete: {
-          age: 24 * 3600, // 24 hours
+          age: 24 * 3600,
           count: 100,
         },
         removeOnFail: {
-          age: 24 * 3600, // 24 hours
+          age: 24 * 3600,
         },
       },
     });
