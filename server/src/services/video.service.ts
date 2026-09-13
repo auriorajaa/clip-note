@@ -28,7 +28,10 @@ type YoutubeDLOutput = {
     thumbnail: string;
 } & Record<string, unknown>;
 
-type YoutubeDlArgs = YoutubeDlFlags & {cookiesFromBrowser?: string};
+type YoutubeDlArgs = YoutubeDlFlags & {
+    cookiesFromBrowser?: string;
+    extractorArgs?: string;
+};
 
 const youtubeDlExec =
     (youtubeDlModule as any).default ?? (youtubeDlModule as any).youtubeDl ?? youtubeDl;
@@ -71,6 +74,15 @@ export class VideoService {
         const cookiesFromBrowser = process.env.YT_COOKIES_FROM_BROWSER;
         if (cookiesFromBrowser) {
             return {cookiesFromBrowser};
+        }
+
+        return {};
+    }
+
+    private static getExtraArgs(): YoutubeDlArgs {
+        const extractorArgs = process.env.YT_EXTRACTOR_ARGS;
+        if (extractorArgs) {
+            return {extractorArgs};
         }
 
         return {};
@@ -137,6 +149,7 @@ export class VideoService {
                     ffmpegLocation: ffmpeg.path,
                     ...(proxy ? {proxy} : {}),
                     ...this.getCookiesOptions(),
+                    ...this.getExtraArgs(),
                 }),
             );
 
@@ -176,9 +189,19 @@ export class VideoService {
                     error.message.includes("Sign in to confirm") ||
                     error.message.includes("not a bot")
                 ) {
+                    logger.warn("YouTube bot detection on video info fetch", {
+                        url,
+                        hasCookies: Boolean(
+                            process.env.YT_COOKIES_FILE ||
+                                process.env.YT_COOKIES_FROM_BROWSER,
+                        ),
+                        usesProxy: Boolean(process.env.YT_PROXY_URL),
+                    });
+
                     throw new AppError(
                         StatusCodes.TOO_MANY_REQUESTS,
-                        "YouTube is currently blocking automated access. Please try again later.",
+                        "YouTube is blocking this request (bot detection). " +
+                            "Configure valid YouTube cookies on the server (YT_COOKIES_FILE) to bypass.",
                     );
                 }
                 if (error.message.includes("Private video")) {
@@ -222,6 +245,7 @@ export class VideoService {
                 ffmpegLocation: ffmpeg.path,
                 ...(proxy ? {proxy} : {}),
                 ...this.getCookiesOptions(),
+                ...this.getExtraArgs(),
             }));
 
             const fileStats = await import("fs/promises").then((fs) =>
