@@ -82,7 +82,13 @@ const initialize = async () => {
 };
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  }),
+);
+
 app.use(express.json());
 app.use(
   morgan(process.env.NODE_ENV === "development" ? "dev" : "combined", {
