@@ -348,13 +348,13 @@ export class VideoService {
 
                 throw new AppError(
                     StatusCodes.INTERNAL_SERVER_ERROR,
-                    "Failed to wodnload audio",
+                    "Failed to download audio",
                 );
             }
 
             throw new AppError(
                 StatusCodes.INTERNAL_SERVER_ERROR,
-                "Failed to wodnload audio",
+                "Failed to download audio",
             );
         }
     }
